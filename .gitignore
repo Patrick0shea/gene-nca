@@ -1,0 +1,22 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# envs
+.venv/
+venv/
+env/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+
+# NOTE: figures/ is intentionally committed so the README renders on GitHub.
+# Add new large artifacts (checkpoints, datasets) here instead:
+*.pt
+*.ckpt
+data/raw/
+*.h5ad
