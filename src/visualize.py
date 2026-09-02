@@ -37,7 +37,12 @@ def ripple(model, ds, gene, path, steps=25, frames=6):
 
     G, pos = _graph_layout(structure)
     idx = np.linspace(0, len(dtraj) - 1, frames).astype(int)
-    vmax = max(0.05, np.abs(dtraj).max())
+    # scale color by the RIPPLE, not by the clamp itself: the knocked-out
+    # gene is forced to `kv` every step, so its own |change| is trivially
+    # ~constant and would otherwise wash out every genuinely propagated
+    # effect on the color scale.
+    ripple_only = np.delete(dtraj, int(gene), axis=1)
+    vmax = max(0.05, np.abs(ripple_only).max())
     norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
 
     fig, axes = plt.subplots(1, frames, figsize=(3.0 * frames, 3.4))
@@ -80,6 +85,39 @@ def generalization(per_pert, mean_shift, path):
     axes[0].set_ylabel("predicted change")
     fig.suptitle("Held-out perturbations: predicted vs true change per gene",
                  color=INK, fontsize=12)
+    fig.tight_layout()
+    fig.savefig(path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+
+
+def single_cell_variability(ds, path, n_show=10, seed=7):
+    """Show what the sergio simulator adds over the toy ODE: every simulated
+    cell has its own noisy trajectory, so the control 'steady state' is
+    really a population with spread, not one number. We show a handful of
+    genes' single-cell distributions with the pseudobulk mean (the model's
+    actual training target) marked alongside."""
+    cells = ds["control_cells"]                # (n_cells, n_genes)
+    control = ds["control"]
+    n_cells, n_genes = cells.shape
+    rng = np.random.default_rng(seed)
+
+    order = np.argsort(-cells.std(axis=0))     # most variable genes first
+    show = order[:n_show]
+
+    fig, ax = plt.subplots(figsize=(max(6, 0.6 * n_show), 4.2))
+    jitter = (rng.random((n_cells, len(show))) - 0.5) * 0.6
+    for col, g in enumerate(show):
+        ax.scatter(np.full(n_cells, col) + jitter[:, col], cells[:, g],
+                   s=6, alpha=0.35, color=ACCENT, edgecolors="none")
+        ax.scatter([col], [control[g]], marker="_", s=400, color=INK,
+                   linewidths=2, zorder=5)
+    ax.set_xticks(range(len(show)))
+    ax.set_xticklabels([f"gene {int(g)}" for g in show], rotation=45, ha="right")
+    ax.set_ylabel("expression (normalized)")
+    ax.set_title(f"Single-cell spread across {n_cells} simulated cells "
+                 f"(dash = pseudobulk mean, the model's training target)",
+                 color=INK, fontsize=11)
+    ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(path, dpi=140, bbox_inches="tight")
     plt.close(fig)
