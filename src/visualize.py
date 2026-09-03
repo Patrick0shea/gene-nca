@@ -67,6 +67,54 @@ def ripple(model, ds, gene, path, steps=25, frames=6):
     plt.close(fig)
 
 
+def ripple_gif(model, ds, gene, path, steps=25, dpi=110, fps=6, hold_frames=6):
+    """Same story as `ripple`, but every step instead of 6 sampled ones, as an
+    animated GIF — the ripple.png strip is the print version, this is the
+    watchable one for a README/blog header."""
+    import io
+    from PIL import Image
+
+    control = ds["control"]
+    kv = ds["knockout_value"]
+    structure = ds["grn"]["A"]
+    _, traj = model(_t(control), int(gene), kv, steps=steps, return_traj=True)
+    dtraj = traj - control[None, :]
+    ripple_only = np.delete(dtraj, int(gene), axis=1)
+    vmax = max(0.05, np.abs(ripple_only).max())
+    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+
+    G, pos = _graph_layout(structure)
+    xs = [pos[i][0] for i in range(structure.shape[0])]
+    ys = [pos[i][1] for i in range(structure.shape[0])]
+    xpad = 0.15 * (max(xs) - min(xs))
+    ypad = 0.15 * (max(ys) - min(ys))
+
+    pngs = []
+    for t in range(len(dtraj)):
+        fig, ax = plt.subplots(figsize=(5, 5), dpi=dpi)
+        nx.draw_networkx_edges(G, pos, ax=ax, edge_color="#cfd8d4",
+                               width=0.6, arrows=False, alpha=0.6)
+        sc = ax.scatter(xs, ys, c=dtraj[t], cmap="RdBu_r", norm=norm,
+                        s=120, edgecolors="none", zorder=3)
+        ax.scatter([pos[int(gene)][0]], [pos[int(gene)][1]], s=240,
+                   facecolors="none", edgecolors=INK, linewidths=2.5, zorder=4)
+        ax.set_title(f"knockout of gene {int(gene)}  ·  step {t}/{len(dtraj) - 1}",
+                    fontsize=11, color=INK)
+        ax.set_xlim(min(xs) - xpad, max(xs) + xpad)
+        ax.set_ylim(min(ys) - ypad, max(ys) + ypad)
+        ax.axis("off")
+        fig.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")     # fixed figsize+dpi -> fixed pixel size
+        plt.close(fig)
+        buf.seek(0)
+        pngs.append(Image.open(buf).convert("RGB"))
+
+    pngs = pngs + [pngs[-1]] * hold_frames   # hold the settled state before looping
+    pngs[0].save(path, save_all=True, append_images=pngs[1:],
+                duration=int(1000 / fps), loop=0)
+
+
 def generalization(per_pert, mean_shift, path):
     dp = np.concatenate([v["delta_pred"] for v in per_pert.values()])
     dt = np.concatenate([v["delta_true"] for v in per_pert.values()])

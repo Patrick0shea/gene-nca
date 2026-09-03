@@ -2,6 +2,10 @@
 
 **A cell modelled as a neural cellular automaton over its gene-regulatory network — used to predict how the cell responds to genetic perturbations.**
 
+![ripple animation](figures/ripple.gif)
+
+*A held-out gene knockout — never shown to the model during training — rippling through the network and settling. Ringed node = clamped, red = up-regulated, blue = down-regulated.*
+
 Most models that predict perturbation responses treat the cell as a black box. This one borrows the idea behind *Growing Neural Cellular Automata* (Mordvintsev et al., 2020): a single shared local rule, applied to every unit over and over, until the system settles — the same process that lets those models grow a pattern and *heal it back* after damage. Here the "grid" is replaced by the gene-regulatory graph, and "healing back to a stable state after a disturbance" is exactly what a cell does after you knock out a gene.
 
 To predict a knockout, we pin the perturbed gene's expression to its silenced value and let the automaton relax. The settled state is the prediction.

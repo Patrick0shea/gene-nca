@@ -59,9 +59,11 @@ def main():
               for k, v in per_pert.items()}
     show_gene = max(impact, key=impact.get)
     viz.ripple(model, ds, show_gene, "figures/ripple.png", steps=args.steps)
+    viz.ripple_gif(model, ds, show_gene, "figures/ripple.gif", steps=args.steps)
     viz.generalization(per_pert, mean_shift, "figures/generalization.png")
     viz.baselines(summary, "figures/baselines.png")
-    made = ["figures/ripple.png", "figures/generalization.png", "figures/baselines.png"]
+    made = ["figures/ripple.png", "figures/ripple.gif",
+            "figures/generalization.png", "figures/baselines.png"]
     if "control_cells" in ds:
         viz.single_cell_variability(ds, "figures/single_cell.png")
         made.append("figures/single_cell.png")
